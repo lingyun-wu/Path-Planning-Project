@@ -16,7 +16,7 @@ const double PARAM_MAX_JERK = 10;  // m.s-3
 const double PARAM_MAX_SPEED_INC = PARAM_MAX_ACCEL * PARAM_DT;
 
 const double PARAM_DIST_SAFTY = 10; 
-
+const double PARAM_DIST_SPECIAL = 2;
 
 
 

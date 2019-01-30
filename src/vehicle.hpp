@@ -43,7 +43,7 @@ class Vehicle {
 		vector<string> successor_states();
         vector<vector<double> > surroundings(vector<vector<double> > &sensor_fusion);
         vector<vector<vector<double> > > surroundings_in_order(vector<vector<double> > &predictions);
-        vector<vector<double> > potential_positions(vector<vector<vector<double> > > &surroundings);
+        vector<double> keep_lane_trajecotry();
 
 
         int lane_determine(double car_d);

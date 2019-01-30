@@ -19,6 +19,8 @@ class Vehicle {
 		double v;
 		double a;
 
+        double T;
+
         bool changing_lane;
 		double target_speed;
 		double goal_s;
@@ -26,7 +28,11 @@ class Vehicle {
 
 		string state;
 
-		
+        bool front_car_exist;
+        bool back_car_exist;
+        vector<double> front_car;
+        vector<double> back_car;
+
 		/**
 		 * Constructor
 		**/
@@ -35,8 +41,12 @@ class Vehicle {
 		Vehicle(int lane, double s, double v, double a);
 		
 		vector<string> successor_states();
-        vector<vector<double> > prediction(vector<vector<double> > &sensor_fusion);
+        vector<vector<double> > surroundings(vector<vector<double> > &sensor_fusion);
+        vector<vector<vector<double> > > surroundings_in_order(vector<vector<double> > &predictions);
+        vector<vector<double> > potential_positions(vector<vector<vector<double> > > &surroundings);
 
+
+        int lane_determine(double car_d);
 };
 
 

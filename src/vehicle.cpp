@@ -2,6 +2,7 @@
 #include<cmath>
 
 #include "vehicle.hpp"
+#include "params.hpp"
 
 
 Vehicle::Vehicle(){}
@@ -16,6 +17,7 @@ Vehicle::Vehicle(int lane, double s, double v, double a) {
 	
 	this->lanes_available = 3;
 	this->changing_lane = false;
+    this->T = 2;    // 2 second
 }
 
 
@@ -44,11 +46,104 @@ vector<string> Vehicle::successor_states() {
 
 
 
-vector<vector<double> > Vehicle::prediction(vector<vector<double> > &sensor_fusion) {
-    int s = sensor_fusion.size();
+vector<vector<double> > Vehicle::surroundings(vector<vector<double> > &sensor_fusion) {
+    int size = sensor_fusion.size();
 
     vector<vector<double> > results;
-    for (int i = 0; i < s; ++i) {
-        int car_s = sensor_fusion[i][5];
+    for (int i = 0; i < size; ++i) {
+        double car_d = sensor_fusion[i][6];
+        if (car_d < 0) continue;
 
+        double car_s = sensor_fusion[i][5];
+        double delta_s = car_s - this->s;
+        if (abs(delta_s) < PARAM_DETECT_RANGE) {
+            double car_vx = sensor_fusion[i][3];
+            double car_vy = sensor_fusion[i][4];
+            double car_speed = sqrt(car_vx*car_vx + car_vy*car_vy);
+            results.push_back({car_d, car_speed, delta_s});
+        }
+    }
+
+    return results;
+}
+
+
+
+vector<vector<vector<double> > > Vehicle::surroundings_in_order(vector<vector<double> > &predictions) {
+    int size = predictions.size();
+    vector<vector<vector<double> > > results(2);
+
+    map<double, int> left, right;
+
+    double front_position = 70.0, back_position = -70.0;
+    for (int i = 0; i < size; ++i) {
+        double car_d = predictions[i][0];
+        int car_lane = lane_determine(car_d);
+        if (car_lane < 0) continue;
+
+        double delta_s = predictions[i][2];
+        double car_speed = predictions[i][1];
+        if (car_lane == lane) {
+        // Get current lane's front and back car info.
+            if (delta_s > 0 && delta_s < front_position) {
+                front_position = delta_s;
+                front_car[0] = car_speed;
+                front_car[1] = delta_s;
+                front_car_exist = true;
+            } else if (delta_s < 0 && delta_s > back_position) {
+                back_position = delta_s;
+                back_car[0] = car_speed;
+                back_car[1] = delta_s;
+                back_car_exist = true;
+            }
+        } else if (car_lane == lane-1) {
+        // Left lane's cars
+            left[delta_s] = i;
+        } else if (car_lane == lane+1) {
+        // Right lane's cars
+            right[delta_s] = i;
+        }
+    }
+
+    for (map<double,int>::iterator it = left.begin(); it != left.end(); ++it) {
+        int index = it->second;
+        results[0].push_back({predictions[index][2], predictions[index][1]});
+    }
+    for (map<double,int>::iterator it = right.begin(); it != right.end(); ++it) {
+        int index = it->second;
+        results[1].push_back({predictions[index][2], predictions[index][1]});
+    }
+
+    
+    if (front_position == 70.0) front_car_exist = false;
+    if (back_position == -70.0) back_car_exist = false;
+
+    return results;
+}
+
+
+
+
+vector<vector<double> > Vehicle::potential_positions(vector<vector<vector<double> > > &surroundings) {
+    vector<vector<double> > results;
+
+
+
+
+    return results;
+}
+
+
+
+
+
+
+
+int Vehicle::lane_determine(double car_d) {
+    int result = -1;
+    if (car_d >= 0 && car_d < 4) result = 0;
+    else if (car_d >= 4 && car_d < 8) result = 1;
+    else if (car_d >= 8 && car_d < 12) result = 2;
+    
+    return result;
 }

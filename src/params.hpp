@@ -9,6 +9,8 @@ const double PARAM_DETECT_RANGE = 60;
 
 const int PARAM_NB_POINTS = 50;
 const double PARAM_DT = 0.02;
+const int PARAM_DELAY_NB = 5;
+
 
 const double PARAM_MAX_SPEED = 22; // m.s-1 
 const double PARAM_MAX_ACCEL = 10; // m.s-2

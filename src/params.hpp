@@ -8,8 +8,8 @@
 const double PARAM_DETECT_RANGE = 60;
 
 const int PARAM_NB_POINTS = 50;
+const int PARAM_PATH_CUTOFF = 45;
 const double PARAM_DT = 0.02;
-const int PARAM_DELAY_NB = 5;
 
 
 const double PARAM_MAX_SPEED = 22; // m.s-1 

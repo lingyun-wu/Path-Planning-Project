@@ -1137,8 +1137,6 @@ iostream
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/vehicle.cpp
 vehicle.hpp
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/vehicle.hpp
-params.hpp
-/home/lingyun/Github/carnd/term3/Path-Planning-Project/src/params.hpp
 
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/vehicle.hpp
 iostream
@@ -1153,4 +1151,6 @@ string
 -
 Eigen-3.3/Eigen/Dense
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/Eigen-3.3/Eigen/Dense
+params.hpp
+/home/lingyun/Github/carnd/term3/Path-Planning-Project/src/params.hpp
 

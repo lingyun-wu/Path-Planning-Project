@@ -1,14 +1,14 @@
 
 #include "vehicle.hpp"
-#include "params.hpp"
 
 
 vehicle::vehicle() {}
 
-vehicle::vehicle(int lane, double s, double v) {
+vehicle::vehicle(int lane, double s, double d, double v) {
 
     this->lane = lane;
     this->s = s;
+    this->d = d;
     this->v = v;
     this->state = state;
 	
@@ -16,6 +16,11 @@ vehicle::vehicle(int lane, double s, double v) {
 	this->changing_lane = false;
     this->T = 2;    // 2 second
 	this->target_speed = PARAM_MAX_SPEED;
+
+    (this->front_car).resize(2);
+    (this->back_car).resize(2);
+    this->front_car_exist = false;
+    this->back_car_exist = false;
 }
 
 
@@ -23,8 +28,11 @@ vehicle::vehicle(int lane, double s, double v) {
 vehicle::~vehicle() {}
 
 
-vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > const &sensor_fusion) {
-	vector<vector<double> > results(2); 
+vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > const &sensor_fusion, int n) {
+	
+    int restart_n = PARAM_NB_POINTS - n - 1;
+    
+    vector<vector<double> > results(2); 
 
     vector<vector<double> > surround_cars = surroundings(sensor_fusion);
     vector<vector<vector<double> > >  two_lane_predictions = surroundings_in_order(surround_cars);
@@ -32,15 +40,18 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
     vector<double> end_s = keep_lane_trajectory();
 	vector<double> start_s(3, 0);
     
-    vector<double> end_d = {6, 0, 0};
-    vector<double> start_d = {6, 0, 0};
+    vector<double> end_d = {d, 0, 0};
+    vector<double> start_d = {d, 0, 0};
 
-	if (previous_s.size() != 0) {
-		start_s[0] = previous_s[PARAM_DELAY_NB].f;
-		start_s[1] = previous_s[PARAM_DELAY_NB].f_dot;
-		start_s[2] = previous_s[PARAM_DELAY_NB].f_ddot;
-	}
-    
+	if (previous_s.size() == 0) {
+		start_s[0] = s;
+	} else {
+        start_s[0] = previous_s[restart_n].f;
+        start_s[1] = previous_s[restart_n].f_dot;
+        start_s[2] = previous_s[restart_n].f_ddot;
+    }
+  
+    cout << "start " << start_s[0] << ' ' << start_s[1] << ' ' << start_s[2] << endl;
     results[0] = JMT(start_s, end_s, T);
     results[1] = JMT(start_d, end_d, T);
 
@@ -49,12 +60,6 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
 
     double dt = PARAM_DT;
     for (int i = 0; i < PARAM_NB_POINTS; ++i) {
-        if (previous_s.size() != 0 && i < PARAM_DELAY_NB) {
-            new_s.push_back(previous_s[i]);
-            new_d.push_back(previous_d[i]);
-            continue;
-        }
-
         double car_s = polyeval(results[0], dt);
         double car_s_dot = polyeval_dot(results[0], dt);
         double car_s_ddot = polyeval_ddot(results[0], dt);
@@ -68,7 +73,7 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
 
 		dt += PARAM_DT;
 	}
-
+    
     previous_s = new_s;
     previous_d = new_d;
 
@@ -134,6 +139,8 @@ vector<vector<vector<double> > > vehicle::surroundings_in_order(vector<vector<do
 
     map<double, int> left, right;
 
+    this->front_car_exist = false;
+    this->back_car_exist = false;
     double front_position = 70.0, back_position = -70.0;
     for (int i = 0; i < size; ++i) {
         double car_d = predictions[i][0];
@@ -172,11 +179,7 @@ vector<vector<vector<double> > > vehicle::surroundings_in_order(vector<vector<do
         int index = it->second;
         results[1].push_back({predictions[index][2], predictions[index][1]});
     }
-
-    
-    if (front_position == 70.0) front_car_exist = false;
-    if (back_position == -70.0) back_car_exist = false;
-
+   
     return results;
 }
 
@@ -184,42 +187,25 @@ vector<vector<vector<double> > > vehicle::surroundings_in_order(vector<vector<do
 
 
 vector<double> vehicle::keep_lane_trajectory() {
-	double accel = 0.7 * PARAM_MAX_ACCEL;
+	double accel = 0.9 * PARAM_MAX_ACCEL;
 	
 	double car_s = 0, car_v = 0, car_a = 0;
 	if (!front_car_exist) {
-		if (v + T*accel < target_speed) {
-			car_s = s + v * T + 0.5 * accel * T * T;
-			car_v = v + T * accel;
-			car_a = 0.2 * accel;
-		} else {
-			car_a = 0;
-			car_v = target_speed;
-			double temp_t = (car_v - v) / accel;
-			car_s = s + v*T + 0.5 * accel * temp_t * temp_t;
-		}
+		car_a = 0;
+		car_v = target_speed;
+		car_s = s + T * 0.5 * (v + car_v);	
 	} else {
 		double front_speed = front_car[0];
 		double front_dist = front_car[1];
-		if (front_dist < PARAM_DIST_SAFTY) {
-			car_v = v - accel * T;
-			if (car_v < 0) car_v = 0;
-			car_a = 0;
-			car_s = s + front_speed * T + front_dist - PARAM_DIST_SAFTY;
-			if (car_s < s) car_s = s + front_speed * T + front_dist - PARAM_DIST_SPECIAL;
-		} else {
-			double dist = front_dist - PARAM_DIST_SAFTY;
-			if (dist > v*T+0.5*accel*T*T-front_speed*T) {
-				car_s = s + v * T + 0.5 * accel * T * T * (front_speed>v?1:(-1));
-				car_v = v + accel*T*(front_speed>v?1:(-1));
-				car_a = 0;
-			} else {
-				car_s = s + front_dist + front_speed * T - PARAM_DIST_SAFTY;
-				car_v = front_speed;
-				car_a = 0;
-			}
-		}
-	}
+	    
+        car_v = front_speed > target_speed ? target_speed : front_speed;
+        car_a = 0;
+        if (front_dist - T*0.5*(v+car_v) + front_speed*T < PARAM_DIST_SAFTY) {
+            car_s = s + front_dist + front_speed*T - PARAM_DIST_SAFTY;
+        } else {
+            car_s = s + T*0.5*(v+car_v);
+        }
+    }
 
     return {car_s, car_v, car_a};
 }

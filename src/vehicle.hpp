@@ -6,9 +6,9 @@
 #include<vector>
 #include<map>
 #include<string>
-
 #include "Eigen-3.3/Eigen/Dense"
 
+#include"params.hpp"
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -34,6 +34,7 @@ class vehicle {
 		int lane;
         int lanes_available;
         double s;
+        double d;
 		double v;
 
         double T;
@@ -59,11 +60,11 @@ class vehicle {
 		**/
 
 		vehicle();
-		vehicle(int lane, double s, double v);
+		vehicle(int lane, double s, double d, double v);
 	
         virtual ~vehicle();
 
-		vector<vector<double> > generate_trajectory(vector<vector<double> > const &sensor_fusion);
+		vector<vector<double> > generate_trajectory(vector<vector<double> > const &sensor_fusion, int n);
         vector<string> successor_states();
         vector<vector<double> > surroundings(vector<vector<double> > const &sensor_fusion);
         vector<vector<vector<double> > > surroundings_in_order(vector<vector<double> > &predictions);

@@ -172,7 +172,8 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 int main() {
   uWS::Hub h;
 
-  vehicle car;
+  int lane = 1;
+  vehicle car(lane, 0, 0, 0);
   
   // Load up map values for waypoint's x,y,s and d normalized normal vectors
   vector<double> map_waypoints_x;
@@ -248,25 +249,36 @@ int main() {
 
           	json msgJson;
 
+            vector<double> next_x_vals = previous_path_x;
+          	vector<double> next_y_vals = previous_path_y;
+            
+            int n = previous_path_x.size();
+            cout << "previous_size " << n << endl;
             car.s = car_s;
+            car.d = car_d;
             car.v = car_speed / 2.237;
-//            vector<vector<double> > coeffs = car.generate_trajectory(sensor_fusion);
 
-            vector<double> next_x_vals(50);
-          	vector<double> next_y_vals(50);
+            vector<vector<double> > coeffs = car.generate_trajectory(sensor_fusion, n);
 
-            /* 
+            vector<double> new_x_vals;
+            vector<double> new_y_vals;
             for (int i = 0; i < PARAM_NB_POINTS; ++i) {
                 double ss = car.previous_s[i].f;
                 double dd = car.previous_d[i].f;
-                vector<double> car_position = getXY(ss, dd, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-                next_x_vals[i] = car_position[0];
-                next_y_vals[i] = car_position[1];
-                
-            }
-            */
 
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+                vector<double> car_position = getXY(ss, dd, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+
+                new_x_vals.push_back(car_position[0]);
+                new_y_vals.push_back(car_position[1]);
+
+            }
+            next_x_vals = new_x_vals;
+            next_y_vals = new_y_vals;
+            
+            cout << "Car s: " << car_s << "; Car d: " << car_d << " Car speed: " <<  car.v << " Car x: " << car_x << " Car y: " << car_y << endl;
+          
+
+            // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = next_x_vals;
           	msgJson["next_y"] = next_y_vals;
 

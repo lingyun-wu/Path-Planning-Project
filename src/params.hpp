@@ -7,7 +7,7 @@
 // Detection range is 60 meters around the ego vehicle 
 const double PARAM_DETECT_RANGE = 60;
 
-const int PARAM_NB_POINTS = 50;
+const int PARAM_NB_POINTS = 5;
 const int PARAM_PATH_CUTOFF = 45;
 const double PARAM_DT = 0.02;
 

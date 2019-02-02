@@ -263,18 +263,25 @@ int main() {
             vector<double> new_x_vals;
             vector<double> new_y_vals;
             for (int i = 0; i < PARAM_NB_POINTS; ++i) {
-                double ss = car.previous_s[i].f;
-                double dd = car.previous_d[i].f;
+                //double ss = car.previous_s[i].f;
+                //double dd = car.previous_d[i].f;
+
+                double ss = car_s + 10 * 0.02 * i;
+                double dd = car_d;
 
                 vector<double> car_position = getXY(ss, dd, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
                 new_x_vals.push_back(car_position[0]);
                 new_y_vals.push_back(car_position[1]);
-
+                cout << car_position[0] << ' ';
             }
             next_x_vals = new_x_vals;
             next_y_vals = new_y_vals;
-            
+           
+            cout << endl;
+
+            cout << next_x_vals[0] <<' ' << next_x_vals[1] << ' ' << next_x_vals[2] << ' ' << next_x_vals[3] << ' ' << next_x_vals[4] << endl;
+
             cout << "Car s: " << car_s << "; Car d: " << car_d << " Car speed: " <<  car.v << " Car x: " << car_x << " Car y: " << car_y << endl;
           
 

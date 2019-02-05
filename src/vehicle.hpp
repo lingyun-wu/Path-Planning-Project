@@ -51,8 +51,8 @@ class vehicle {
         vector<double> front_car;
         vector<double> back_car;
 
-        vector<Point3> previous_s;
-        vector<Point3> previous_d;
+        int start_n;
+        vector<vector<double> > coeffs;
 
 
 		/**
@@ -60,7 +60,7 @@ class vehicle {
 		**/
 
 		vehicle();
-		vehicle(int lane, double s, double d, double v);
+		vehicle(int lane, double s, double v);
 	
         virtual ~vehicle();
 
@@ -68,11 +68,11 @@ class vehicle {
         vector<string> successor_states();
         vector<vector<double> > surroundings(vector<vector<double> > const &sensor_fusion);
         vector<vector<vector<double> > > surroundings_in_order(vector<vector<double> > &predictions);
-        vector<double> keep_lane_trajectory();
+        Point3 keep_lane_trajectory(Point3 start_s);
 
 
         int lane_determine(double car_d);
-        vector<double> JMT(vector<double> &start, vector<double> &end, double T);
+        vector<double> JMT(Point3 &Start, Point3 &End, double T);
 
         double polyeval(vector<double> c, double t);
         double polyeval_dot(vector<double> c, double t);

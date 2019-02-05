@@ -187,6 +187,12 @@ Path_Planning_BINARY_DIR:STATIC=/home/lingyun/Github/carnd/term3/Path-Planning-P
 //Value Computed by CMake
 Path_Planning_SOURCE_DIR:STATIC=/home/lingyun/Github/carnd/term3/Path-Planning-Project
 
+//Value Computed by CMake
+Path_Planning_Wt_BINARY_DIR:STATIC=/home/lingyun/Github/carnd/term3/Path-Planning-Project/build
+
+//Value Computed by CMake
+Path_Planning_Wt_SOURCE_DIR:STATIC=/home/lingyun/Github/carnd/term3/Path-Planning-Project
+
 
 ########################
 # INTERNAL cache entries

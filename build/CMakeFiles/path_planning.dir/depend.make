@@ -215,6 +215,7 @@ CMakeFiles/path_planning.dir/src/main.cpp.o: ../src/Eigen-3.3/Eigen/src/plugins/
 CMakeFiles/path_planning.dir/src/main.cpp.o: ../src/json.hpp
 CMakeFiles/path_planning.dir/src/main.cpp.o: ../src/main.cpp
 CMakeFiles/path_planning.dir/src/main.cpp.o: ../src/params.hpp
+CMakeFiles/path_planning.dir/src/main.cpp.o: ../src/spline.h
 CMakeFiles/path_planning.dir/src/main.cpp.o: ../src/vehicle.hpp
 
 CMakeFiles/path_planning.dir/src/vehicle.cpp.o: ../src/Eigen-3.3/Eigen/Cholesky

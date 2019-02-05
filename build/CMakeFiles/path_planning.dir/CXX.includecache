@@ -1125,6 +1125,8 @@ Eigen-3.3/Eigen/QR
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/Eigen-3.3/Eigen/QR
 json.hpp
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/json.hpp
+spline.h
+/home/lingyun/Github/carnd/term3/Path-Planning-Project/src/spline.h
 vehicle.hpp
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/vehicle.hpp
 params.hpp
@@ -1132,6 +1134,18 @@ params.hpp
 
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/params.hpp
 iostream
+-
+cmath
+-
+
+/home/lingyun/Github/carnd/term3/Path-Planning-Project/src/spline.h
+cstdio
+-
+cassert
+-
+vector
+-
+algorithm
 -
 
 /home/lingyun/Github/carnd/term3/Path-Planning-Project/src/vehicle.cpp

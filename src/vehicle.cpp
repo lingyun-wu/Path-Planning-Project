@@ -4,11 +4,11 @@
 
 vehicle::vehicle() {}
 
-vehicle::vehicle(int lane, double s, double d, double v) {
+vehicle::vehicle(int lane, double s, double v) {
 
     this->lane = lane;
     this->s = s;
-    this->d = d;
+    this->d = lane * PARAM_LANE_WIDTH + PARAM_LANE_WIDTH*0.5;
     this->v = v;
     this->state = state;
 	
@@ -21,6 +21,7 @@ vehicle::vehicle(int lane, double s, double d, double v) {
     (this->back_car).resize(2);
     this->front_car_exist = false;
     this->back_car_exist = false;
+    this->start_n = 0;
 }
 
 
@@ -28,54 +29,38 @@ vehicle::vehicle(int lane, double s, double d, double v) {
 vehicle::~vehicle() {}
 
 
+
+
+
+
+
 vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > const &sensor_fusion, int n) {
-	
-    int restart_n = PARAM_NB_POINTS - n - 1;
     
+    int used = PARAM_NB_POINTS - n;
+    double dt = PARAM_DT;
     vector<vector<double> > results(2); 
 
     vector<vector<double> > surround_cars = surroundings(sensor_fusion);
     vector<vector<vector<double> > >  two_lane_predictions = surroundings_in_order(surround_cars);
 
-    vector<double> end_s = keep_lane_trajectory();
-	vector<double> start_s(3, 0);
-    
-    vector<double> end_d = {d, 0, 0};
-    vector<double> start_d = {d, 0, 0};
+    Point3 start_s(s, 0, 0);
+    Point3 start_d(d, 0, 0);
 
-	if (previous_s.size() == 0) {
-		start_s[0] = s;
-	} else {
-        start_s[0] = previous_s[restart_n].f;
-        start_s[1] = previous_s[restart_n].f_dot;
-        start_s[2] = previous_s[restart_n].f_ddot;
+    if (start_n != 0) {
+        start_s.f = polyeval(coeffs[0], start_n*dt);
+        start_s.f_dot = polyeval_dot(coeffs[0], start_n*dt);
+        start_s.f_ddot = polyeval_ddot(coeffs[0], start_n*dt);
     }
-  
-    cout << "start " << start_s[0] << ' ' << start_s[1] << ' ' << start_s[2] << endl;
+
+    Point3 end_s = keep_lane_trajectory(start_s); 
+    Point3 end_d = {d, 0, 0};
+    
     results[0] = JMT(start_s, end_s, T);
     results[1] = JMT(start_d, end_d, T);
+    coeffs = results;
 
-    vector<Point3> new_s;
-    vector<Point3> new_d;
-
-    double dt = PARAM_DT;
-    for (int i = 0; i < PARAM_NB_POINTS; ++i) {
-        double car_s = polyeval(results[0], dt);
-        double car_s_dot = polyeval_dot(results[0], dt);
-        double car_s_ddot = polyeval_ddot(results[0], dt);
-
-        double car_d = polyeval(results[1], dt);
-        double car_d_dot = polyeval_dot(results[1], dt);
-        double car_d_ddot = polyeval_dot(results[1], dt);
-
-        new_s.push_back(Point3(car_s, car_s_dot, car_s_ddot));
-        new_d.push_back(Point3(car_d, car_d_dot, car_d_ddot));
-
-		dt += PARAM_DT;
-	}
-    
-    previous_s = new_s;
-    previous_d = new_d;
+    if (start_n == 0) start_n = used+ PARAM_PATH_CUTOFF;
+    else start_n = used;
 
 	return results;
 }
@@ -112,18 +97,22 @@ vector<string> vehicle::successor_states() {
 
 vector<vector<double> > vehicle::surroundings(vector<vector<double> > const &sensor_fusion) {
     int size = sensor_fusion.size();
+    int future_t = 0;
+    if (start_n != 0) future_t = PARAM_DT * PARAM_PATH_CUTOFF;
+
 
     vector<vector<double> > results;
     for (int i = 0; i < size; ++i) {
         double car_d = sensor_fusion[i][6];
         if (car_d < 0) continue;
 
-        double car_s = sensor_fusion[i][5];
-        double delta_s = car_s - this->s;
+        double car_vx = sensor_fusion[i][3];
+        double car_vy = sensor_fusion[i][4];
+        double car_speed = sqrt(car_vx*car_vx + car_vy*car_vy);    
+        double car_s = sensor_fusion[i][5] + car_speed * future_t;
+        double delta_s = car_s - this->s - (this->v)*future_t;
+        
         if (abs(delta_s) < PARAM_DETECT_RANGE) {
-            double car_vx = sensor_fusion[i][3];
-            double car_vy = sensor_fusion[i][4];
-            double car_speed = sqrt(car_vx*car_vx + car_vy*car_vy);
             results.push_back({car_d, car_speed, delta_s});
         }
     }
@@ -186,14 +175,19 @@ vector<vector<vector<double> > > vehicle::surroundings_in_order(vector<vector<do
 
 
 
-vector<double> vehicle::keep_lane_trajectory() {
-	double accel = 0.9 * PARAM_MAX_ACCEL;
+Point3 vehicle::keep_lane_trajectory(Point3 start_s) {
+	double accel = PARAM_MAX_ACCEL;
 	
+    double ss = start_s.f;
+    double vv = start_s.f_dot;
+    double aa = start_s.f_ddot;
+
 	double car_s = 0, car_v = 0, car_a = 0;
 	if (!front_car_exist) {
-		car_a = 0;
+		cout << "OK1" << endl;
+        car_a = 0;
 		car_v = target_speed;
-		car_s = s + T * 0.5 * (v + car_v);	
+		car_s = ss + T * 0.5 * (vv + car_v);	
 	} else {
 		double front_speed = front_car[0];
 		double front_dist = front_car[1];
@@ -201,13 +195,13 @@ vector<double> vehicle::keep_lane_trajectory() {
         car_v = front_speed > target_speed ? target_speed : front_speed;
         car_a = 0;
         if (front_dist - T*0.5*(v+car_v) + front_speed*T < PARAM_DIST_SAFTY) {
-            car_s = s + front_dist + front_speed*T - PARAM_DIST_SAFTY;
+            car_s = ss + front_dist + front_speed*T - PARAM_DIST_SAFTY;
         } else {
-            car_s = s + T*0.5*(v+car_v);
+            car_s = ss + T*0.5*(vv+car_v);
         }
     }
 
-    return {car_s, car_v, car_a};
+    return Point3(car_s, car_v, car_a);
 }
 
 
@@ -229,7 +223,8 @@ int vehicle::lane_determine(double car_d) {
 
 
 
-vector<double> vehicle::JMT(vector<double> &start, vector<double> &end, double T) {
+
+vector<double> vehicle::JMT(Point3 &Start, Point3 &End, double T) {
 	/**
 	 * Calculate the Jerk Minimizing Trajectory that connects the initial state
 	 * to the final state in time T.
@@ -248,6 +243,17 @@ vector<double> vehicle::JMT(vector<double> &start, vector<double> &end, double T
 	 *   > JMT([0, 10, 0], [10, 10, 0], 1)
 	 *     [0.0, 10.0, 0.0, 0.0, 0.0, 0.0]
 	 */
+
+    vector<double> start(3);
+    start[0] = Start.f;
+    start[1] = Start.f_dot;
+    start[2] = Start.f_ddot;
+
+    vector<double> end(3);
+    end[0] = End.f;
+    end[1] = End.f_dot;
+    end[2] = End.f_ddot;
+
 	MatrixXd A = MatrixXd(3, 3);
 	A << T*T*T, T*T*T*T, T*T*T*T*T,
 	  3*T*T, 4*T*T*T,5*T*T*T*T,
@@ -273,6 +279,8 @@ vector<double> vehicle::JMT(vector<double> &start, vector<double> &end, double T
 
 
 
+
+// evaluation of polynom
 double vehicle::polyeval(vector<double> c, double t) {
   double res = 0.0;
   for (size_t i = 0; i < c.size(); i++) {

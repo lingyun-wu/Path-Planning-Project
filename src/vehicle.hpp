@@ -51,7 +51,6 @@ class vehicle {
         vector<double> front_car;
         vector<double> back_car;
 
-        int start_n;
         vector<vector<double> > coeffs;
 
 
@@ -68,8 +67,10 @@ class vehicle {
         vector<string> successor_states();
         vector<vector<double> > surroundings(vector<vector<double> > const &sensor_fusion);
         vector<vector<vector<double> > > surroundings_in_order(vector<vector<double> > &predictions);
-        Point3 keep_lane_trajectory(Point3 start_s);
 
+        Point3 keep_lane_trajectory(Point3 start_s);
+        Point3 prep_lane_change_trajectory(string st, Point3 start_s, vector<vector<vector<double> > > &predictions);
+        vector<Point3> lane_change_trajectory(string st, Point3 start_s, Point3 start_d, vector<vector<vector<double> > > &predictions);
 
         int lane_determine(double car_d);
         vector<double> JMT(Point3 &Start, Point3 &End, double T);

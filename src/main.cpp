@@ -248,19 +248,13 @@ int main() {
             
             int n = previous_path_x.size();
 
-            if (n != 0) {
-                for (int i = 0; i < PARAM_PATH_CUTOFF; ++i) {
-                    next_x_vals.push_back(previous_path_x[i]);
-                    next_y_vals.push_back(previous_path_y[i]);
-                }
-            }
             car.s = car_s;
             car.v = car_speed / 2.237;
 
             vector<vector<double> > coeffs = car.generate_trajectory(sensor_fusion, n);
 
             double dt = 0;
-            for (int i = 0; i < PARAM_NB_POINTS - PARAM_PATH_CUTOFF; ++i) {
+            for (int i = 0; i < PARAM_NB_POINTS; ++i) {
                 double ss = car.polyeval(coeffs[0], dt);
                 double dd = car.d;
 

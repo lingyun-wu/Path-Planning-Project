@@ -10,7 +10,7 @@ vehicle::vehicle(int lane, double s, double v) {
     this->s = s;
     this->d = lane * PARAM_LANE_WIDTH + PARAM_LANE_WIDTH*0.5;
     this->v = v;
-    this->state = state;
+    this->state = "KL";
 	
 	this->lanes_available = 3;
 	this->changing_lane = false;
@@ -21,7 +21,6 @@ vehicle::vehicle(int lane, double s, double v) {
     (this->back_car).resize(2);
     this->front_car_exist = false;
     this->back_car_exist = false;
-    this->start_n = 0;
 }
 
 
@@ -43,24 +42,47 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
     vector<vector<double> > surround_cars = surroundings(sensor_fusion);
     vector<vector<vector<double> > >  two_lane_predictions = surroundings_in_order(surround_cars);
 
-    Point3 start_s(s, 0, 0);
+    // start s 
+    Point3 start_s(s, v, 0);
     Point3 start_d(d, 0, 0);
-
-    if (start_n != 0) {
-        start_s.f = polyeval(coeffs[0], start_n*dt);
-        start_s.f_dot = polyeval_dot(coeffs[0], start_n*dt);
-        start_s.f_ddot = polyeval_ddot(coeffs[0], start_n*dt);
+    Point3 end_s, end_d;
+    
+    if (n != 0) {
+        start_s.f = polyeval(coeffs[0], used*dt);
+        start_s.f_dot = polyeval_dot(coeffs[0], used*dt);
+        start_s.f_ddot = polyeval_ddot(coeffs[0], used*dt);
     }
 
-    Point3 end_s = keep_lane_trajectory(start_s); 
-    Point3 end_d = {d, 0, 0};
-    
+    if (state == "LCL" || state == "LCR") {
+        start_d.f = polyeval(coeffs[1], used*dt);
+        start_d.f_dot = polyeval_dot(coeffs[1], used*dt);
+        start_d.f_ddot = polyeval_ddot(coeffs[1], used*dt);
+        
+        vector<Point3> SD = lane_change_trajectory(state, start_s, start_d, two_lane_predictions);
+        end_s = SD[0];
+        end_d = SD[1];
+    } else {
+        vector<string> states = successor_states();
+        
+        double cost;
+        vector<double> costs;
+        vector<Point3> end_ss, end_ds;
+        for (int i = 0; i < states.size(); ++i) {
+            if (states[i] == "KL") {
+                end_s = keep_lane_trajectory(start_s); 
+                end_d = {d, 0, 0};
+
+            } else if (states[i] == "LCL" || states[i] == "LCR") {
+
+            } else if (states[i] == "PLCL" || states[i] == "PLCR") {
+
+            }
+        }
+
+    }
     results[0] = JMT(start_s, end_s, T);
     results[1] = JMT(start_d, end_d, T);
     coeffs = results;
-
-    if (start_n == 0) start_n = used+ PARAM_PATH_CUTOFF;
-    else start_n = used;
 
 	return results;
 }
@@ -77,17 +99,19 @@ vector<string> vehicle::successor_states() {
     instantaneously, so LCL and LCR can only transition back to KL.
     */
     vector<string> states;
-    states.push_back("KL");
     string state = this->state;
     if(state.compare("KL") == 0) {
         if (lane > 0 ) states.push_back("PLCL");
         if (lane < lanes_available-1) states.push_back("PLCR");
+        states.push_back("KL");
     } else if (state.compare("PLCL") == 0) {
             states.push_back("PLCL");
             states.push_back("LCL");
+            states.push_back("KL");
     } else if (state.compare("PLCR") == 0) {
             states.push_back("PLCR");
             states.push_back("LCR");
+            states.push_back("KL");
     }
 	
     return states;
@@ -98,7 +122,6 @@ vector<string> vehicle::successor_states() {
 vector<vector<double> > vehicle::surroundings(vector<vector<double> > const &sensor_fusion) {
     int size = sensor_fusion.size();
     int future_t = 0;
-    if (start_n != 0) future_t = PARAM_DT * PARAM_PATH_CUTOFF;
 
 
     vector<vector<double> > results;
@@ -109,8 +132,8 @@ vector<vector<double> > vehicle::surroundings(vector<vector<double> > const &sen
         double car_vx = sensor_fusion[i][3];
         double car_vy = sensor_fusion[i][4];
         double car_speed = sqrt(car_vx*car_vx + car_vy*car_vy);    
-        double car_s = sensor_fusion[i][5] + car_speed * future_t;
-        double delta_s = car_s - this->s - (this->v)*future_t;
+        double car_s = sensor_fusion[i][5];
+        double delta_s = car_s - this->s;
         
         if (abs(delta_s) < PARAM_DETECT_RANGE) {
             results.push_back({car_d, car_speed, delta_s});
@@ -184,7 +207,6 @@ Point3 vehicle::keep_lane_trajectory(Point3 start_s) {
 
 	double car_s = 0, car_v = 0, car_a = 0;
 	if (!front_car_exist) {
-		cout << "OK1" << endl;
         car_a = 0;
 		car_v = target_speed;
 		car_s = ss + T * 0.5 * (vv + car_v);	
@@ -204,6 +226,23 @@ Point3 vehicle::keep_lane_trajectory(Point3 start_s) {
     return Point3(car_s, car_v, car_a);
 }
 
+
+
+
+
+vector<Point3> vehicle::lane_change_trajectory(string st, Point3 start_s, Point3 start_d, vector<vector<vector<double> > > &predictions) {
+    Point3 end_s, end_d;
+    int final_lane;
+    if (st == "LCL") {
+        final_lane = lane - 1;
+    } else {
+        final_lane = lane + 1;
+    } 
+    end_d = Point3(final_lane*4.0+2.0, 0, 0);
+
+
+    return {end_s, end_d};
+}
 
 
 

@@ -7,14 +7,15 @@ vehicle::vehicle() {}
 vehicle::vehicle(int lane, double s, double v) {
 
     this->lane = lane;
+    this->target_lane = lane;
     this->s = s;
     this->d = lane * PARAM_LANE_WIDTH + PARAM_LANE_WIDTH*0.5;
     this->v = v;
     this->state = "KL";
 	
 	this->lanes_available = 3;
-	this->changing_lane = false;
-    this->T = 2;    // 2 second
+    this->T = 2.5;    // 2.5 second
+    this->T_CL = T;
 	this->target_speed = PARAM_MAX_SPEED;
 
     (this->front_car).resize(2);
@@ -45,12 +46,16 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
     // start s 
     Point3 start_s(s, v, 0);
     Point3 start_d(d, 0, 0);
-    Point3 end_s, end_d;
+    Point3 end_s, end_d(d, 0, 0);
     
     if (n != 0) {
         start_s.f = polyeval(coeffs[0], used*dt);
         start_s.f_dot = polyeval_dot(coeffs[0], used*dt);
         start_s.f_ddot = polyeval_ddot(coeffs[0], used*dt);
+
+        start_d.f = polyeval(coeffs[1], used*dt);
+        start_d.f_dot = polyeval_dot(coeffs[1], used*dt);
+        start_d.f_ddot = polyeval_ddot(coeffs[1], used*dt);
     }
 
     if (state == "LCL" || state == "LCR") {
@@ -58,28 +63,72 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
         start_d.f_dot = polyeval_dot(coeffs[1], used*dt);
         start_d.f_ddot = polyeval_ddot(coeffs[1], used*dt);
         
-        vector<Point3> SD = lane_change_trajectory(state, start_s, start_d, two_lane_predictions);
+        vector<Point3> SD = lane_change_trajectory(state, start_s, start_d);
         end_s = SD[0];
         end_d = SD[1];
-    } else {
-        vector<string> states = successor_states();
-        
-        double cost;
-        vector<double> costs;
-        vector<Point3> end_ss, end_ds;
-        for (int i = 0; i < states.size(); ++i) {
-            if (states[i] == "KL") {
-                end_s = keep_lane_trajectory(start_s); 
-                end_d = {d, 0, 0};
 
-            } else if (states[i] == "LCL" || states[i] == "LCR") {
+        double final_d = target_lane*4.0+2.0;
+        double boundary_d = state == "LCL" ? (target_lane+1)*4.0 : target_lane*4.0;
+        if ((state == "LCL" && start_d.f-boundary_d < 0) || (state=="LCR" && start_d.f-boundary_d > 0)) {
+            lane = target_lane;
+        }
 
-            } else if (states[i] == "PLCL" || states[i] == "PLCR") {
+        if (abs(start_d.f-final_d) < 0.01) {
+            d = lane*4.0+2.0;
+            state = "KL";
+        }
+    } else { 
+        if (state == "PLCL" || state == "PLCR") {
+            string st = state == "PLCL" ? "LCL" : "LCR";
+            if (!check_collision(st, two_lane_predictions)) {
+                vector<Point3> temp_end = lane_change_trajectory(st, start_s, start_d);
+                end_s = temp_end[0];
+                end_d = temp_end[1];
+                state = st;
+                target_lane = state == "LCL" ? lane-1 : lane+1;
+            } else {
+                Point3 temp_end_s_kl = keep_lane_trajectory(start_s);
+                Point3 temp_end_s_plc;
+                
+                double speed_plc = prepare_lane_change_trajectory(state, start_s, temp_end_s_plc, two_lane_predictions);
+                if (speed_plc < temp_end_s_kl.f_dot || !front_car_exist) {
+                    end_s = temp_end_s_kl;
+                } else {
+                    end_s = temp_end_s_plc;
+                }
+                cout << "PLC " << speed_plc << ' ' << temp_end_s_kl.f_dot << endl;
+            }
+        } else if (state == "KL") {
+            if (!front_car_exist) {
+                end_s = keep_lane_trajectory(start_s);
+            } else {
+                vector<string> states = successor_states();
+                vector<double> all_speeds;
+                vector<Point3> all_end_s;
+
+                for(int i = 0; i < states.size(); ++i) {
+                    if (states[i] == "KL") {
+                        Point3 temp_end_s = keep_lane_trajectory(start_s); 
+                        all_speeds.push_back(temp_end_s.f_dot);
+                        all_end_s.push_back(temp_end_s);
+                    } else if (states[i] == "PLCL" || states[i] == "PLCR") {
+                        Point3 temp_end_s;
+                        double temp_speed = prepare_lane_change_trajectory(states[i], start_s, temp_end_s, two_lane_predictions);
+                        all_speeds.push_back(temp_speed);
+                        all_end_s.push_back(temp_end_s);
+                    }
+                    cout << states[i] << ' ' << all_speeds[i] << endl;
+                }
+                vector<double>::iterator fast = max_element(begin(all_speeds), end(all_speeds));
+                int best_idx = distance(begin(all_speeds), fast);
+                state = states[best_idx];
+                end_s = all_end_s[best_idx];
 
             }
         }
 
     }
+
     results[0] = JMT(start_s, end_s, T);
     results[1] = JMT(start_d, end_d, T);
     coeffs = results;
@@ -106,11 +155,9 @@ vector<string> vehicle::successor_states() {
         states.push_back("KL");
     } else if (state.compare("PLCL") == 0) {
             states.push_back("PLCL");
-            states.push_back("LCL");
             states.push_back("KL");
     } else if (state.compare("PLCR") == 0) {
             states.push_back("PLCR");
-            states.push_back("LCR");
             states.push_back("KL");
     }
 	
@@ -230,21 +277,77 @@ Point3 vehicle::keep_lane_trajectory(Point3 start_s) {
 
 
 
-vector<Point3> vehicle::lane_change_trajectory(string st, Point3 start_s, Point3 start_d, vector<vector<vector<double> > > &predictions) {
+vector<Point3> vehicle::lane_change_trajectory(string st, Point3 start_s, Point3 start_d) {
     Point3 end_s, end_d;
-    int final_lane;
-    if (st == "LCL") {
-        final_lane = lane - 1;
-    } else {
-        final_lane = lane + 1;
-    } 
+    int final_lane = target_lane;
+
     end_d = Point3(final_lane*4.0+2.0, 0, 0);
 
+    end_s.f = start_s.f + T * start_s.f_dot;
+    end_s.f_dot = start_s.f_dot;
+    end_s.f_ddot = 0;
 
     return {end_s, end_d};
 }
 
 
+
+
+double vehicle::prepare_lane_change_trajectory(string st, Point3 start_s, Point3 &end_s,  vector<vector<vector<double> > > & predictions) {
+    int index = st == "PLCL" ? 0 : 1;
+    double result_speed = 0;
+    
+    end_s = keep_lane_trajectory(start_s);
+
+    if (predictions[index].size() == 0) {
+        result_speed = PARAM_MAX_SPEED;
+    } else if (predictions[index].size() == 1) {
+        double delta_s = predictions[index][0][0];
+        double car_speed = predictions[index][0][1];
+        double future_delta_s = delta_s + car_speed*T - start_s.f_dot*T;
+        if (delta_s >= PARAM_DIST_SAFTY && future_delta_s >= PARAM_DIST_MERGE) {
+            result_speed = car_speed > target_speed ? target_speed : car_speed;
+        } else if (delta_s <= -PARAM_DIST_SAFTY_BACK && future_delta_s < -PARAM_DIST_MERGE_BACK) {
+            result_speed = target_speed;
+        }
+    } else {
+        for (int i = 1; i < predictions[index].size(); ++i) {
+            double delta_s1 = predictions[index][i-1][0];
+            double car_speed1 = predictions[index][i-1][1];
+            double delta_s2 = predictions[index][i][0];
+            double car_speed2 = predictions[index][i][1];
+            if (delta_s1 < 0 && delta_s2 > 0) {
+                double future_delta_s1 = delta_s1 + (car_speed1-start_s.f_dot)*T;
+                double future_delta_s2 = delta_s2 + (car_speed2-start_s.f_dot)*T;
+                if (delta_s1 < -PARAM_DIST_SAFTY_BACK && delta_s2 > PARAM_DIST_SAFTY && future_delta_s1 < -PARAM_DIST_MERGE_BACK && future_delta_s2 > PARAM_DIST_MERGE) {
+                    result_speed = car_speed2;
+                }
+            }
+        }
+    }
+    return result_speed;
+}
+
+
+
+
+
+
+
+bool vehicle::check_collision(string st, vector<vector<vector<double> > > &predictions) {
+    int index = st == "LCL" ? 0 : 1;
+    
+    bool result = false;
+    for (int i = 0; i < predictions[index].size(); ++i) {
+        double delta_s = predictions[index][i][0];
+        double car_speed = predictions[index][i][1];
+        if (abs(delta_s) < PARAM_DIST_MERGE) return true;
+        double future_delta_s = (car_speed - v) * T + delta_s;
+        if (abs(future_delta_s) < PARAM_DIST_MERGE) return true;
+    }
+
+    return result;
+}
 
 
 

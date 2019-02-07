@@ -32,17 +32,16 @@ class vehicle {
 	public:
 		
 		int lane;
+        int target_lane;
         int lanes_available;
         double s;
         double d;
 		double v;
 
         double T;
+        double T_CL;
 
-        bool changing_lane;
 		double target_speed;
-		double goal_s;
-		double goal_lane;
 
 		string state;
 
@@ -70,7 +69,9 @@ class vehicle {
 
         Point3 keep_lane_trajectory(Point3 start_s);
         Point3 prep_lane_change_trajectory(string st, Point3 start_s, vector<vector<vector<double> > > &predictions);
-        vector<Point3> lane_change_trajectory(string st, Point3 start_s, Point3 start_d, vector<vector<vector<double> > > &predictions);
+        vector<Point3> lane_change_trajectory(string st, Point3 start_s, Point3 start_d);
+        double prepare_lane_change_trajectory(string st, Point3 start_s, Point3 &end_s, vector<vector<vector<double> > > &predictions);
+        bool check_collision(string st, vector<vector<vector<double> > > &predictions);
 
         int lane_determine(double car_d);
         vector<double> JMT(Point3 &Start, Point3 &End, double T);

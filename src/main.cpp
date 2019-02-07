@@ -256,7 +256,7 @@ int main() {
             double dt = 0;
             for (int i = 0; i < PARAM_NB_POINTS; ++i) {
                 double ss = car.polyeval(coeffs[0], dt);
-                double dd = car.d;
+                double dd = car.polyeval(coeffs[1], dt);;
 
                 vector<double> car_position = getXY(ss, dd, s_x, s_y, s_dx, s_dy);
 
@@ -265,7 +265,8 @@ int main() {
                 dt += PARAM_DT;
             }
                        
-
+            
+            cout << "Car state: " << car.state << ";  Car lane: " << car.lane << "; Target_lane: " << car.target_lane << endl;
             cout << "Car s: " << car_s << "; Car d: " << car_d << " Car speed: " <<  car.v << " Car x: " << car_x << " Car y: " << car_y << endl; 
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds

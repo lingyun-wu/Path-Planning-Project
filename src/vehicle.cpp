@@ -96,7 +96,6 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
                 } else {
                     end_s = temp_end_s_plc;
                 }
-                cout << "PLC " << speed_plc << ' ' << temp_end_s_kl.f_dot << endl;
             }
         } else if (state == "KL") {
             if (!front_car_exist) {
@@ -117,7 +116,7 @@ vector<vector<double> > vehicle::generate_trajectory(vector<vector<double> > con
                         all_speeds.push_back(temp_speed);
                         all_end_s.push_back(temp_end_s);
                     }
-                    cout << states[i] << ' ' << all_speeds[i] << endl;
+                    //cout << states[i] << ' ' << all_speeds[i] << endl;
                 }
                 vector<double>::iterator fast = max_element(begin(all_speeds), end(all_speeds));
                 int best_idx = distance(begin(all_speeds), fast);
@@ -341,9 +340,9 @@ bool vehicle::check_collision(string st, vector<vector<vector<double> > > &predi
     for (int i = 0; i < predictions[index].size(); ++i) {
         double delta_s = predictions[index][i][0];
         double car_speed = predictions[index][i][1];
-        if (abs(delta_s) < PARAM_DIST_MERGE) return true;
+        if (delta_s < PARAM_DIST_MERGE && delta_s > -PARAM_DIST_MERGE_BACK) return true;
         double future_delta_s = (car_speed - v) * T + delta_s;
-        if (abs(future_delta_s) < PARAM_DIST_MERGE) return true;
+        if (future_delta_s < PARAM_DIST_MERGE && future_delta_s > -PARAM_DIST_MERGE_BACK) return true;
     }
 
     return result;

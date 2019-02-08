@@ -266,8 +266,8 @@ int main() {
             }
                        
             
-            cout << "Car state: " << car.state << ";  Car lane: " << car.lane << "; Target_lane: " << car.target_lane << endl;
-            cout << "Car s: " << car_s << "; Car d: " << car_d << " Car speed: " <<  car.v << " Car x: " << car_x << " Car y: " << car_y << endl; 
+            cout << "Car state: " << car.state << ";  Car lane: " << car.lane << endl;
+            cout << "Car s: " << car_s << "; Car d: " << car_d << "; Car speed: " <<  car.v << "; Car x: " << car_x << "; Car y: " << car_y << endl; 
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = next_x_vals;

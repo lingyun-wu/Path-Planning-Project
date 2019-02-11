@@ -243,19 +243,24 @@ int main() {
 
           	json msgJson;
 
+            // Next way points
             vector<double> next_x_vals;
           	vector<double> next_y_vals;
-            
+           
+            // Number of previous left way points
             int n = previous_path_x.size();
 
-            car.s = car_s;
+            // Input the car's position and speed
+            car.s = wrap_s(car_s);
             car.v = car_speed / 2.237;
 
+            // Get the JMT polynomial coefficients of s and d
             vector<vector<double> > coeffs = car.generate_trajectory(sensor_fusion, n);
 
+            // Calculate next way points from the coefficients and convert them to x and y coordinates
             double dt = 0;
             for (int i = 0; i < PARAM_NB_POINTS; ++i) {
-                double ss = car.polyeval(coeffs[0], dt);
+                double ss = wrap_s(car.polyeval(coeffs[0], dt));
                 double dd = car.polyeval(coeffs[1], dt);;
 
                 vector<double> car_position = getXY(ss, dd, s_x, s_y, s_dx, s_dy);
@@ -265,9 +270,9 @@ int main() {
                 dt += PARAM_DT;
             }
                        
-            
+            // Output car's information
             cout << "Car state: " << car.state << ";  Car lane: " << car.lane << endl;
-            cout << "Car s: " << car_s << "; Car d: " << car_d << "; Car speed: " <<  car.v << "; Car x: " << car_x << "; Car y: " << car_y << endl; 
+            cout << "Car s: " << wrap_s(car_s) << "; Car d: " << car_d << "; Car speed: " <<  car.v << "; Car x: " << car_x << "; Car y: " << car_y << endl; 
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = next_x_vals;

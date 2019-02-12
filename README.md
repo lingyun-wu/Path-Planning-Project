@@ -43,11 +43,16 @@ The car has 5 different states:
 * lane change left (LCL)
 * lane change right (LCR). 
 
-The initial state is keep lane. 
+The initial state is keep lane. The "KL" state is always followed by "KL", "PLCL", or "PLCR"; The "PLCL" ("PLCR") is always followed by "KL", "PLCL" ("PLCR"), or "LCL" ("LCR"); The "LCL" ("LCR") is always followed by "KL".
 
-### Next State
-For each state, the program can generate different target end point for the car and then compare them to find the best path. "KL" state follows the target speed or the front car's speed in the current lane; "PLCL" ("PLCR") state is making the car prepare for left (right) lane change; "LCL" ("LCR")
- means the car is trying to change to the left (right) lane. The result speed of each potential next state is generated for comparison. The state with fastest speed would be chosen as the next state.
+
+### Path Generation
+For each state, the program can generate different target end point for the car and then compare them to find the best path. 
+* In the "KL" state, if there is no vehicle in front of the ego car, it would follow a target speed of 21 m/s; otherwise, it would follow the front car as the same speed.
+* In the "PLCL" ("PLCR") state, the program checks nearby cars in the left (right) lane to see if there is any enough space for the ego car to change the lane.  
+* In the "LCL" ("LCR") state, the ego car would follow the lane change trajectory until it goes to the center of the target lane. 
+
+Each state generates an predicted speed after a 2 seconds time window. The state with fastest speed would be chosen as the next state.
 
 
 ### Jerk Minimizing Trajectory 

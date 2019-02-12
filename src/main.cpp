@@ -177,31 +177,39 @@ int main() {
 
   string line;
   while (getline(in_map_, line)) {
-  	istringstream iss(line);
-  	double x;
-  	double y;
-  	float s;
-  	float d_x;
-  	float d_y;
-  	iss >> x;
-  	iss >> y;
-  	iss >> s;
-  	iss >> d_x;
-  	iss >> d_y;
-  	map_waypoints_x.push_back(x);
-  	map_waypoints_y.push_back(y);
-  	map_waypoints_s.push_back(s);
-  	map_waypoints_dx.push_back(d_x);
-  	map_waypoints_dy.push_back(d_y);
+      istringstream iss(line);
+      double x;
+      double y;
+      float s;
+      float d_x;
+      float d_y;
+      iss >> x;
+      iss >> y;
+      iss >> s;
+      iss >> d_x;
+      iss >> d_y;
+      map_waypoints_x.push_back(x);
+      map_waypoints_y.push_back(y);
+      map_waypoints_s.push_back(s);
+      map_waypoints_dx.push_back(d_x);
+      map_waypoints_dy.push_back(d_y);
   }
 
-    // Splines to support conversion from s,d to x,y.
-    // Other direction is also possible but more difficult.
-    tk::spline s_x, s_y, s_dx, s_dy;
-    s_x.set_points(map_waypoints_s,map_waypoints_x);
-    s_y.set_points(map_waypoints_s,map_waypoints_y);
-    s_dx.set_points(map_waypoints_s,map_waypoints_dx);
-    s_dy.set_points(map_waypoints_s,map_waypoints_dy);
+
+  map_waypoints_x.push_back(map_waypoints_x[0]);
+  map_waypoints_y.push_back(map_waypoints_y[0]);
+  map_waypoints_s.push_back(max_s);
+  map_waypoints_dx.push_back(map_waypoints_dx[0]);
+  map_waypoints_dy.push_back(map_waypoints_dy[0]);
+
+
+  // Splines to support conversion from s,d to x,y.
+  // Other direction is also possible but more difficult.
+  tk::spline s_x, s_y, s_dx, s_dy;
+  s_x.set_points(map_waypoints_s,map_waypoints_x);
+  s_y.set_points(map_waypoints_s,map_waypoints_y);
+  s_dx.set_points(map_waypoints_s,map_waypoints_dx);
+  s_dy.set_points(map_waypoints_s,map_waypoints_dy);
 
 
   h.onMessage([&car, &s_x, &s_y, &s_dx, &s_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
